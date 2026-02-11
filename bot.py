@@ -36,6 +36,30 @@ VBUCKS_PRICES = {
     "50000": "1800"
 }
 
+def get_image_path(filename):
+    """Get absolute path for an image file, checking multiple locations"""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # List of paths to check in order
+    possible_paths = [
+        os.path.join(current_dir, "IMG", filename), # Same directory as bot.py
+        os.path.join(os.path.dirname(current_dir), "IMG", filename), # Parent directory
+        os.path.join(current_dir, "SHOP VALORAT", "IMG", filename), # Subdirectory
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            print(f"[IMAGE] Found {filename} at: {path}")
+            return path
+            
+    # If not found, print debug info
+    print(f"[IMAGE] WARNING: Could not find {filename}")
+    print(f"[IMAGE] Searched in:")
+    for path in possible_paths:
+        print(f"  - {path}")
+        
+    return None
+
 class TicketButton(discord.ui.View):
     def __init__(self, guild_id):
         super().__init__()
@@ -570,16 +594,16 @@ async def prices(ctx):
         
         view = TicketButton(ctx.guild.id)
         # Use karys.png for prices command as well (consistent branding)
-        bot_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(bot_dir)
-        image_path = os.path.join(parent_dir, "IMG", "karys.png")
-        if not os.path.exists(image_path):
-             image_path = os.path.join(bot_dir, "IMG", "karys.png")
+        image_path = get_image_path("karys.png")
              
-        if os.path.exists(image_path):
-            file = discord.File(image_path, filename="karys.png")
-            embed.set_image(url="attachment://karys.png")
-            await ctx.send(embed=embed, file=file, view=view)
+        if image_path:
+            try:
+                file = discord.File(image_path, filename="karys.png")
+                embed.set_image(url="attachment://karys.png")
+                await ctx.send(embed=embed, file=file, view=view)
+            except Exception as e:
+                print(f"[ERROR] Failed to send image: {e}")
+                await ctx.send(embed=embed, view=view)
         else:
             await ctx.send(embed=embed, view=view)
         print(f'[PRICES] Embed sent successfully')
@@ -901,16 +925,11 @@ async def nitro(ctx):
     embed.set_footer(text="Karys Shop • Trusted Service 💎")
     
     # Image handling logic
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "nitro.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "nitro.png")
+    image_path = get_image_path("nitro.png")
     
     view = TicketButton(ctx.guild.id)
     
-    if os.path.exists(image_path):
+    if image_path:
         try:
             file = discord.File(image_path, filename="nitro.png")
             embed.set_image(url=f"attachment://nitro.png")
@@ -984,16 +1003,11 @@ async def boost(ctx):
     embed.set_footer(text="Karys Shop • High Quality Boosts 💎")
     
     # Image handling logic
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "boost.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "boost.png")
+    image_path = get_image_path("boost.png")
     
     view = TicketButton(ctx.guild.id)
     
-    if os.path.exists(image_path):
+    if image_path:
         try:
             file = discord.File(image_path, filename="boost.png")
             embed.set_image(url=f"attachment://boost.png")
@@ -1057,15 +1071,11 @@ async def gift(ctx):
     embed.set_footer(text="Karys Shop | Valorant Gifting Service", icon_url=bot.user.avatar.url if bot.user.avatar else None)
     
     # Try to add a thumbnail if Karys logo exists
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    if not os.path.exists(image_path):
-         image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    image_path = get_image_path("karys.png")
          
     view = TicketButton(ctx.guild.id)
 
-    if os.path.exists(image_path):
+    if image_path:
         file = discord.File(image_path, filename="karys.png")
         embed.set_thumbnail(url="attachment://karys.png")
         await ctx.send(embed=embed, file=file, view=view)
@@ -1109,18 +1119,18 @@ async def gift_slash(interaction: discord.Interaction):
     embed.set_footer(text="Karys Shop | Valorant Gifting Service", icon_url=interaction.client.user.avatar.url if interaction.client.user.avatar else None)
     
     # Image logic for slash command
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    if not os.path.exists(image_path):
-         image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    image_path = get_image_path("karys.png")
     
     view = TicketButton(interaction.guild_id)
     
-    if os.path.exists(image_path):
-        file = discord.File(image_path, filename="karys.png")
-        embed.set_thumbnail(url="attachment://karys.png")
-        await interaction.response.send_message(embed=embed, file=file, view=view)
+    if image_path:
+        try:
+            file = discord.File(image_path, filename="karys.png")
+            embed.set_thumbnail(url="attachment://karys.png")
+            await interaction.response.send_message(embed=embed, file=file, view=view)
+        except Exception as e:
+            print(f"[ERROR] Failed to send image: {e}")
+            await interaction.response.send_message(embed=embed, view=view)
     else:
         await interaction.response.send_message(embed=embed, view=view)
 
@@ -1165,27 +1175,21 @@ async def spotify_slash(interaction: discord.Interaction):
     embed.set_footer(text="Karys Shop • 100% Satisfaction 💚")
     
     # Image handling logic
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "spotify.png")
+    image_path = get_image_path("spotify.png")
     
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "spotify.png")
+    view = TicketButton(interaction.guild_id)
     
-    if os.path.exists(image_path):
+    if image_path:
         try:
             file = discord.File(image_path, filename="spotify.png")
             embed.set_image(url=f"attachment://spotify.png")
-            view = TicketButton(interaction.guild_id)
             await interaction.response.send_message(embed=embed, file=file, view=view)
         except Exception as e:
             print(f"[ERROR] Failed to send Spotify image: {e}")
-            view = TicketButton(interaction.guild_id)
             await interaction.response.send_message(embed=embed, view=view)
     else:
         # Fallback
         embed.set_image(url="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/1200px-Spotify_logo_without_text.svg.png")
-        view = TicketButton(interaction.guild_id)
         await interaction.response.send_message(embed=embed, view=view)
 
 @bot.tree.command(name="nitro", description="عرض خطط Discord Nitro Premium")
@@ -1228,16 +1232,11 @@ async def nitro_slash(interaction: discord.Interaction):
     embed.set_footer(text="Karys Shop • Trusted Service 💎")
     
     # Image handling logic
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "nitro.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "nitro.png")
+    image_path = get_image_path("nitro.png")
     
     view = TicketButton(interaction.guild_id)
     
-    if os.path.exists(image_path):
+    if image_path:
         try:
             file = discord.File(image_path, filename="nitro.png")
             embed.set_image(url=f"attachment://nitro.png")
@@ -1311,16 +1310,11 @@ async def boost_slash(interaction: discord.Interaction):
     embed.set_footer(text="Karys Shop • High Quality Boosts 💎")
     
     # Image handling logic
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "boost.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "boost.png")
+    image_path = get_image_path("boost.png")
     
     view = TicketButton(interaction.guild_id)
     
-    if os.path.exists(image_path):
+    if image_path:
         try:
             file = discord.File(image_path, filename="boost.png")
             embed.set_image(url=f"attachment://boost.png")
