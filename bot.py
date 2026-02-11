@@ -616,13 +616,13 @@ async def on_ready():
             except Exception as e:
                 print(f"Error resuming giveaway {giveaway_id}: {e}")
             
-    # Initialize invite cache
-    for guild in bot.guilds:
-        try:
-            invite_cache[guild.id] = await guild.invites()
-            await asyncio.sleep(1) # Safety delay to prevent Rate Limits
-        except Exception as e:
-            print(f"Failed to fetch invites: {e}")
+    # Initialize invite cache - DISABLED TO PREVENT CLOUDFLARE 1015 ERROR
+    # for guild in bot.guilds:
+    #     try:
+    #         invite_cache[guild.id] = await guild.invites()
+    #         await asyncio.sleep(2) # Increased safety delay
+    #     except Exception as e:
+    #         print(f"Failed to fetch invites: {e}")
             
     bot_setup_done = True
     
