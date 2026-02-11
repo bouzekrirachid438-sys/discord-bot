@@ -1,0 +1,20 @@
+{
+  "shop_name": "Karys Shop",
+  "currency": {
+    "usd_symbol": "$",
+    "dh_symbol": "dh"
+  },
+  "delivery_time": "1-5 minutes after payment confirmation",
+  "payment_methods": [
+    "Bank transfer",
+    "Remitly",
+    "Binance (BTC | USDT)",
+    "Cashplus"
+  ],
+  "platforms": [
+    "PlayStation 5",
+    "Xbox",
+    "PC"
+  ],
+  "order_instructions": "Send payment proof in the payment room or DM an admin"
+}
