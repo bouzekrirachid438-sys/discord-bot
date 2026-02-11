@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 import json
 import random
+from typing import Literal
 
 # Load environment variables
 load_dotenv()
@@ -591,6 +592,22 @@ async def on_ready():
     for giveaway_id, data in giveaways_data.items():
         if not data["ended"]:
             bot.add_view(GiveawayJoinButton(giveaway_id, data["required_invites"]))
+            
+            # Resume timer
+            try:
+                end_time_ts = data.get("end_time")
+                if end_time_ts:
+                    now_ts = datetime.now().timestamp()
+                    remaining = end_time_ts - now_ts
+                    
+                    if remaining <= 0:
+                        # Ended while offline
+                        bot.loop.create_task(end_giveaway_logic(giveaway_id))
+                    else:
+                        # Resume timer
+                        bot.loop.create_task(schedule_giveaway_end(giveaway_id, remaining))
+            except Exception as e:
+                print(f"Error resuming giveaway {giveaway_id}: {e}")
             
     # Initialize invite cache
     for guild in bot.guilds:
@@ -2041,7 +2058,7 @@ async def invites(interaction: discord.Interaction, member: discord.Member = Non
 
 @bot.tree.command(name="giveaway", description="Manage Giveaways (Admin Only)")
 @discord.app_commands.describe(
-    action="create / end / reroll / list / chance",
+    action="Select an action to perform",
     duration="Duration (e.g. 10m, 1h, 1d) (For create)",
     winners="Number of winners (For create/reroll)",
     prize="Prize description (For create)",
@@ -2050,7 +2067,7 @@ async def invites(interaction: discord.Interaction, member: discord.Member = Non
     user="User to manage chances (For chance)",
     amount="Amount of chances to add (For chance)"
 )
-async def giveaway(interaction: discord.Interaction, action: str, duration: str = None, winners: int = 1, prize: str = None, required_invites: int = 0, message_id: str = None, user: discord.Member = None, amount: int = None):
+async def giveaway(interaction: discord.Interaction, action: Literal["create", "end", "reroll", "list", "chance"], duration: str = None, winners: int = 1, prize: str = None, required_invites: int = 0, message_id: str = None, user: discord.Member = None, amount: int = None):
     
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
@@ -2103,11 +2120,7 @@ async def giveaway(interaction: discord.Interaction, action: str, duration: str 
         await message.edit(view=GiveawayJoinButton(message.id, required_invites))
         
         # Background task to end giveaway
-        async def end_giveaway_task():
-            await asyncio.sleep(seconds)
-            await end_giveaway_logic(message.id)
-
-        asyncio.create_task(end_giveaway_task())
+        asyncio.create_task(schedule_giveaway_end(message.id, seconds))
 
     elif action == "end":
         if not message_id:
@@ -2148,6 +2161,10 @@ async def giveaway(interaction: discord.Interaction, action: str, duration: str 
         save_data('invites.json', invites_data)
         
         await interaction.response.send_message(f"✅ Added **{amount}** bonus chances to {user.mention}. Total Bonus: {invites_data[user_id]['bonus']}", ephemeral=True)
+
+async def schedule_giveaway_end(message_id, delay):
+    await asyncio.sleep(delay)
+    await end_giveaway_logic(message_id)
 
 async def end_giveaway_logic(message_id):
     message_id = str(message_id)
