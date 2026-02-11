@@ -789,70 +789,32 @@ async def order(ctx, points: str = None):
     view = TicketButton(ctx.guild.id)
     await ctx.send(embed=embed, view=view)
 
-@bot.command(name='help_shop', aliases=['shop_help'])
+@bot.command(name="help_shop")
 async def help_shop(ctx):
-    """Show available commands"""
     embed = discord.Embed(
         title="🛍️ Karys Shop - Commands",
-        color=0xFF0000
+        description="Here are the available commands:",
+        color=0x2f3136
     )
     
-    embed.add_field(
-        name="!prices",
-        value="View Valorant Points price list",
-        inline=False
-    )
+    # Prefix Commands
+    embed.add_field(name="!prices", value="View Valorant Points price list", inline=False)
+    embed.add_field(name="!stock", value="Check stock availability", inline=False)
+    embed.add_field(name="!order [amount]", value="Order Valorant Points (e.g., !order 10000)", inline=False)
+    embed.add_field(name="!rules", value="Display buying terms and rules", inline=False)
+    embed.add_field(name="!spotify", value="Display Spotify Premium subscription plans", inline=False)
+    embed.add_field(name="!nitro", value="Display Discord Nitro Premium plans", inline=False)
+    embed.add_field(name="!boost", value="Display Server Boost prices", inline=False)
+    embed.add_field(name="!gift", value="Display Valorant Gifting Service", inline=False)
+    embed.add_field(name="!help_shop", value="Show this help message", inline=False)
     
-    embed.add_field(
-        name="!stock",
-        value="Check stock availability",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="!order [amount]",
-        value="Order Valorant Points (e.g., !order 10000)",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="!rules",
-        value="Display buying terms and rules",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="!spotify",
-        value="Display Spotify Premium subscription plans",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="!nitro",
-        value="Display Discord Nitro Premium plans",
-        inline=False
-    )
-
-    embed.add_field(
-        name="!boost",
-        value="Display Server Boost prices",
-        inline=False
-    )
-
-    embed.add_field(
-        name="!gift",
-        value="Display Valorant Gifting Service",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="!help_shop",
-        value="Show this help message",
-        inline=False
-    )
+    # Slash Commands
+    embed.add_field(name="──────────────", value="**Slash Commands (Recommended):**", inline=False)
+    embed.add_field(name="/kgiveaway", value="Create and Manage Giveaways (Admin)", inline=False)
+    embed.add_field(name="/vbucks", value="View Fortnite V-Bucks prices", inline=False)
+    embed.add_field(name="/ticket_panel", value="Deploy Ticket System (Admin)", inline=False)
     
     embed.set_footer(text="Karys Shop | Your trusted Valorant Points provider")
-    
     await ctx.send(embed=embed)
 
 @bot.command(name='rules', aliases=['terms'])
