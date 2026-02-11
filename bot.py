@@ -1390,18 +1390,25 @@ async def post(interaction: discord.Interaction):
     bot_dir = os.path.dirname(os.path.abspath(__file__))
     # Try to find image in parent directory (project root)
     parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
+    image_path = os.path.join(parent_dir, "IMG", "image.png")
     
     # If not found, try in current directory
     if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "karys.png")
+        image_path = os.path.join(bot_dir, "IMG", "image.png")
+    
+    # Fallback to karys.png if image.png doesn't exist
+    if not os.path.exists(image_path):
+         image_path = os.path.join(parent_dir, "IMG", "karys.png")
+         if not os.path.exists(image_path):
+              image_path = os.path.join(bot_dir, "IMG", "karys.png")
     
     if os.path.exists(image_path):
         print(f"[INFO] Found image at: {image_path}")
         try:
             # Create Discord File object directly from file path
-            file = discord.File(image_path, filename="karys.png")
-            embed.set_image(url=f"attachment://karys.png")
+            filename = os.path.basename(image_path)
+            file = discord.File(image_path, filename=filename)
+            embed.set_image(url=f"attachment://{filename}")
             view = TicketButton(interaction.guild_id)
             await interaction.response.send_message(embed=embed, file=file, view=view)
             print(f"[SUCCESS] Image sent successfully")
@@ -1426,19 +1433,26 @@ async def post_command(ctx):
     bot_dir = os.path.dirname(os.path.abspath(__file__))
     # Try to find image in parent directory (project root)
     parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
+    image_path = os.path.join(parent_dir, "IMG", "image.png")
     
     # If not found, try in current directory
     if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "karys.png")
+        image_path = os.path.join(bot_dir, "IMG", "image.png")
+    
+    # Fallback to karys.png if image.png doesn't exist
+    if not os.path.exists(image_path):
+         image_path = os.path.join(parent_dir, "IMG", "karys.png")
+         if not os.path.exists(image_path):
+              image_path = os.path.join(bot_dir, "IMG", "karys.png")
     
     view = TicketButton(ctx.guild.id)
     if os.path.exists(image_path):
         print(f"[INFO] Found image at: {image_path}")
         try:
             # Create Discord File object directly from file path
-            file = discord.File(image_path, filename="karys.png")
-            embed.set_image(url=f"attachment://karys.png")
+            filename = os.path.basename(image_path)
+            file = discord.File(image_path, filename=filename)
+            embed.set_image(url=f"attachment://{filename}")
             await ctx.send(embed=embed, file=file, view=view)
             print(f"[SUCCESS] Image sent successfully")
         except Exception as e:
