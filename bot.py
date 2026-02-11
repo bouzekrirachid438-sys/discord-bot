@@ -1997,6 +1997,28 @@ async def ticket_panel(ctx):
         await ctx.send(embed=embed, view=TicketSystemView())
 
 
+# --- Utility Commands ---
+
+@bot.command(name="sync")
+async def sync(ctx):
+    """Sync slash commands manually"""
+    if ctx.author.guild_permissions.administrator:
+        try:
+            synced = await bot.tree.sync()
+            await ctx.send(f"✅ Synced {len(synced)} slash commands.")
+        except Exception as e:
+            await ctx.send(f"❌ Error syncing: {e}")
+    else:
+        await ctx.send("❌ You do not have permission to use this command.")
+
+@bot.command(name="giveaway")
+async def giveaway_prefix(ctx):
+    await ctx.send("⚠️ **Please use the slash command:** `/giveaway`\nExample: `/giveaway create 10m 1 Prize 0`")
+
+@bot.command(name="invites")
+async def invites_prefix(ctx):
+    await ctx.send("⚠️ **Please use the slash command:** `/invites`")
+
 # --- Giveaway Commands ---
 
 @bot.tree.command(name="invites", description="Check your invites or another user's")
