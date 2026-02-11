@@ -2030,7 +2030,7 @@ async def sync(ctx):
 
 @bot.command(name="giveaway")
 async def giveaway_prefix(ctx):
-    await ctx.send("⚠️ **Please use the slash command:** `/giveaway`\nExample: `/giveaway create 10m 1 Prize 0`")
+    await ctx.send("⚠️ **Please use the new slash command:** `/kgiveaway`\nExample: `/kgiveaway` then select `create`")
 
 @bot.command(name="invites")
 async def invites_prefix(ctx):
@@ -2056,7 +2056,7 @@ async def invites(interaction: discord.Interaction, member: discord.Member = Non
     
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="giveaway", description="Manage Giveaways (Admin Only)")
+@bot.tree.command(name="kgiveaway", description="Manage Giveaways (Admin Only)")
 @discord.app_commands.describe(
     action="Select an action to perform",
     duration="Duration (e.g. 10m, 1h, 1d) (For create)",
@@ -2067,7 +2067,7 @@ async def invites(interaction: discord.Interaction, member: discord.Member = Non
     user="User to manage chances (For chance)",
     amount="Amount of chances to add (For chance)"
 )
-async def giveaway(interaction: discord.Interaction, action: Literal["create", "end", "reroll", "list", "chance"], duration: str = None, winners: int = 1, prize: str = None, required_invites: int = 0, message_id: str = None, user: discord.Member = None, amount: int = None):
+async def kgiveaway(interaction: discord.Interaction, action: Literal["create", "end", "reroll", "list", "chance"], duration: str = None, winners: int = 1, prize: str = None, required_invites: int = 0, message_id: str = None, user: discord.Member = None, amount: int = None):
     
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
