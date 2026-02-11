@@ -571,8 +571,15 @@ class TicketSystemView(discord.ui.View):
         
         await interaction.followup.send(f"✅ Ticket created: {channel.mention}", ephemeral=True)
 
+# Flag to ensure on_ready logic only runs once
+bot_setup_done = False
+
 @bot.event
 async def on_ready():
+    global bot_setup_done
+    if bot_setup_done:
+        print("Bot reconnected - skipping setup.")
+        return
     print(f'Logged in as {bot.user.name}')
     print('Bot is ready!')
     
@@ -613,8 +620,11 @@ async def on_ready():
     for guild in bot.guilds:
         try:
             invite_cache[guild.id] = await guild.invites()
-        except:
-            pass
+            await asyncio.sleep(1) # Safety delay to prevent Rate Limits
+        except Exception as e:
+            print(f"Failed to fetch invites: {e}")
+            
+    bot_setup_done = True
     
     # Sync commands manually to avoid 429 Rate Limits
     # try:
