@@ -28,7 +28,10 @@ DISCORD_BOT_TOKEN=token_dyalek_hna
 ```
 3. Bdl `token_dyalek_hna` b l-token li khdti mn Discord Developer Portal
 
-
+**Matalan:**
+```
+DISCORD_BOT_TOKEN=YOUR_TOKEN_HERE
+```
 
 ## L-Marra Rabe3a: Zid l-Bot l Server dyalek
 
