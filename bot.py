@@ -2018,26 +2018,20 @@ async def invites(interaction: discord.Interaction, member: discord.Member = Non
     
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="kgiveaway", description="Manage Giveaways")
-@discord.app_commands.describe(
-    action="Select an action to perform",
-    duration="Duration (e.g. 10m, 1h, 1d) (For create)",
-    winners="Number of winners (For create/reroll)",
-    prize="Prize description (For create)",
-    required_invites="Invites required to join (For create)",
-    message_id="Message ID of the giveaway (For end/reroll/list)",
-    user="User to manage chances (For chance)",
-    amount="Amount of chances to add (For chance)"
-)
-async def kgiveaway(interaction: discord.Interaction, action: Literal["create", "end", "reroll", "list", "chance"], duration: str = None, winners: int = 1, prize: str = None, required_invites: int = 0, message_id: str = None, user: discord.Member = None, amount: int = None):
-    
+# --- Giveaway Command Group ---
+class GiveawayGroup(discord.app_commands.Group):
+    def __init__(self):
+        super().__init__(name="kgiveaway", description="Manage Giveaways")
 
-
-    if action == "create":
-        if not duration or not prize:
-            await interaction.response.send_message("❌ Usage: `/giveaway create <duration> <winners> <prize> [invites]`", ephemeral=True)
-            return
-            
+    @discord.app_commands.command(name="create", description="Start a new giveaway")
+    @discord.app_commands.describe(
+        duration="Duration (e.g. 1m, 1h, 1d)",
+        winners="Number of winners",
+        prize="Prize description",
+        required_invites="Invites required to join (Optional)",
+        description="Extra description for the giveaway (Optional)"
+    )
+    async def create(self, interaction: discord.Interaction, duration: str, winners: int, prize: str, required_invites: int = 0, description: str = None):
         # Parse duration
         time_units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
         try:
@@ -2053,7 +2047,11 @@ async def kgiveaway(interaction: discord.Interaction, action: Literal["create", 
         end_time = datetime.now() + timedelta(seconds=seconds)
         timestamp = int(end_time.timestamp())
         
-        embed = discord.Embed(title=f"🎉 **GIVEAWAY: {prize}** 🎉", description=f"React to join!\n\n**Ends:** <t:{timestamp}:R>", color=0xFF00FF)
+        desc_text = f"React to join!\n\n**Ends:** <t:{timestamp}:R>"
+        if description:
+            desc_text = f"{description}\n\n" + desc_text
+
+        embed = discord.Embed(title=f"🎉 **GIVEAWAY: {prize}** 🎉", description=desc_text, color=0xFF00FF)
         embed.add_field(name="🏆 Winners", value=str(winners), inline=True)
         embed.add_field(name="📨 Required Invites", value=str(required_invites), inline=True)
         embed.add_field(name="👥 Entries", value="0", inline=True)
@@ -2077,50 +2075,96 @@ async def kgiveaway(interaction: discord.Interaction, action: Literal["create", 
         save_data('giveaways.json', giveaways_data)
         
         # Add View
-        await message.edit(view=GiveawayJoinButton(message.id, required_invites))
+        await message.edit(view=GiveawayJoinButton(str(message.id), required_invites))
         
         # Background task to end giveaway
-        asyncio.create_task(schedule_giveaway_end(message.id, seconds))
+        bot.loop.create_task(schedule_giveaway_end(message.id, seconds))
 
-    elif action == "end":
+    @discord.app_commands.command(name="end", description="End a running giveaway immediately")
+    @discord.app_commands.describe(message_id="Message ID of the giveaway")
+    async def end(self, interaction: discord.Interaction, message_id: str):
         if not message_id:
             await interaction.response.send_message("❌ Please provide the Message ID.", ephemeral=True)
             return
-        await end_giveaway_logic(int(message_id))
-        await interaction.response.send_message("✅ Giveaway process triggered.", ephemeral=True)
+        
+        # Check if giveaway exists
+        if message_id not in giveaways_data:
+             await interaction.response.send_message("❌ Giveaway not found.", ephemeral=True)
+             return
 
-    elif action == "reroll":
+        if giveaways_data[message_id]["ended"]:
+             await interaction.response.send_message("❌ This giveaway has already ended.", ephemeral=True)
+             return
+
+        await interaction.response.send_message("✅ Ending giveaway...", ephemeral=True)
+        await end_giveaway_logic(message_id)
+
+    @discord.app_commands.command(name="reroll", description="Pick new winners for a giveaway")
+    @discord.app_commands.describe(message_id="Message ID of the giveaway", winners="Number of new winners (Optional)")
+    async def reroll(self, interaction: discord.Interaction, message_id: str, winners: int = 1):
         if not message_id:
             await interaction.response.send_message("❌ Please provide the Message ID.", ephemeral=True)
             return
-            
+        
         await reroll_giveaway(interaction, message_id, winners)
 
-    elif action == "list":
-        if not message_id:
-            await interaction.response.send_message("❌ Please provide the Message ID.", ephemeral=True)
+    @discord.app_commands.command(name="list", description="List active giveaways")
+    async def list(self, interaction: discord.Interaction):
+        active_giveaways = [gid for gid, data in giveaways_data.items() if not data["ended"]]
+        if not active_giveaways:
+            await interaction.response.send_message("No active giveaways.", ephemeral=True)
             return
             
+        msg = "**Active Giveaways:**\n"
+        for gid in active_giveaways:
+            data = giveaways_data[gid]
+            msg += f"- ID: `{gid}` | Prize: **{data['prize']}** | Ends: <t:{data['end_time']}:R>\n"
+        
+        await interaction.response.send_message(msg, ephemeral=True)
+
+    @discord.app_commands.command(name="participants", description="Show who joined a giveaway (Admin Only)")
+    @discord.app_commands.describe(message_id="Message ID of the giveaway")
+    async def participants(self, interaction: discord.Interaction, message_id: str):
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+            return
+
         if message_id not in giveaways_data:
              await interaction.response.send_message("❌ Giveaway not found.", ephemeral=True)
              return
              
         participants = giveaways_data[message_id]["participants"]
-        await interaction.response.send_message(f"📂 **Participants ({len(participants)}):**\n" + ", ".join([f"<@{uid}>" for uid in participants[:50]]) + (f"... and {len(participants)-50} more" if len(participants) > 50 else ""), ephemeral=True)
+        if not participants:
+            await interaction.response.send_message("❌ No participants yet.", ephemeral=True)
+            return
 
-    elif action == "chance":
-        if not user or amount is None:
-             await interaction.response.send_message("❌ Usage: `/giveaway chance @user <amount>`", ephemeral=True)
-             return
+        count = len(participants)
+        user_list = ", ".join([f"<@{uid}>" for uid in participants[:80]]) # Limit to avoid 2000 char limit
         
-        user_id = str(user.id)
-        if user_id not in invites_data:
+        embed = discord.Embed(title=f"👥 Participants ({count})", description=user_list, color=0x00FF00)
+        if count > 80:
+            embed.set_footer(text=f"And {count-80} more...")
+            
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.app_commands.command(name="chance", description="Add bonus chances to a user")
+    @discord.app_commands.describe(user="User to manage", amount="Amount to add")
+    async def chance(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+         if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+            return
+
+         user_id = str(user.id)
+         if user_id not in invites_data:
             invites_data[user_id] = {"regular": 0, "fake": 0, "bonus": 0, "leaves": 0}
             
-        invites_data[user_id]["bonus"] += amount
-        save_data('invites.json', invites_data)
+         invites_data[user_id]["bonus"] += amount
+         save_data('invites.json', invites_data)
         
-        await interaction.response.send_message(f"✅ Added **{amount}** bonus chances to {user.mention}. Total Bonus: {invites_data[user_id]['bonus']}", ephemeral=True)
+         await interaction.response.send_message(f"✅ Added **{amount}** bonus chances to {user.mention}. Total Bonus: {invites_data[user_id]['bonus']}", ephemeral=True)
+
+# Add the group
+bot.tree.add_command(GiveawayGroup())
 
 async def schedule_giveaway_end(message_id, delay):
     await asyncio.sleep(delay)
@@ -2153,10 +2197,10 @@ async def end_giveaway_logic(message_id):
             for uid in participants:
                 # Base chance = 1
                 chance = 1
-                if uid in invites_data:
-                    chance += invites_data[uid]["bonus"]
+                uid_str = str(uid)
+                if uid_str in invites_data:
+                    chance += invites_data[uid_str].get("bonus", 0)
                 
-                # Check for negative?
                 if chance < 1: chance = 1 
                 
                 # Add to pool
