@@ -570,11 +570,9 @@ async def prices(ctx):
         
         view = TicketButton(ctx.guild.id)
         # Use karys.png for prices command as well (consistent branding)
+        # Use karys.png from current directory
         bot_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(bot_dir)
-        image_path = os.path.join(parent_dir, "IMG", "karys.png")
-        if not os.path.exists(image_path):
-             image_path = os.path.join(bot_dir, "IMG", "karys.png")
+        image_path = os.path.join(bot_dir, "karys.png")
              
         if os.path.exists(image_path):
             file = discord.File(image_path, filename="karys.png")
@@ -837,13 +835,9 @@ async def spotify(ctx):
     
     embed.set_footer(text="Karys Shop • 100% Satisfaction 💚")
     
-    # Add Spotify image from local file
+    # Add Spotify image from local file (current directory)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "spotify.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "spotify.png")
+    image_path = os.path.join(bot_dir, "spotify.png")
     
     if os.path.exists(image_path):
         try:
@@ -900,13 +894,9 @@ async def nitro(ctx):
     
     embed.set_footer(text="Karys Shop • Trusted Service 💎")
     
-    # Image handling logic
+    # Image handling logic (nitro.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "nitro.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "nitro.png")
+    image_path = os.path.join(bot_dir, "nitro.png")
     
     view = TicketButton(ctx.guild.id)
     
@@ -983,13 +973,9 @@ async def boost(ctx):
     
     embed.set_footer(text="Karys Shop • High Quality Boosts 💎")
     
-    # Image handling logic
+    # Image handling logic (boost.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "boost.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "boost.png")
+    image_path = os.path.join(bot_dir, "boost.png")
     
     view = TicketButton(ctx.guild.id)
     
@@ -1056,12 +1042,9 @@ async def gift(ctx):
 
     embed.set_footer(text="Karys Shop | Valorant Gifting Service", icon_url=bot.user.avatar.url if bot.user.avatar else None)
     
-    # Try to add a thumbnail if Karys logo exists
+    # Try to add a thumbnail if Karys logo exists (karys.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    if not os.path.exists(image_path):
-         image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    image_path = os.path.join(bot_dir, "karys.png")
          
     view = TicketButton(ctx.guild.id)
 
@@ -1108,12 +1091,9 @@ async def gift_slash(interaction: discord.Interaction):
 
     embed.set_footer(text="Karys Shop | Valorant Gifting Service", icon_url=interaction.client.user.avatar.url if interaction.client.user.avatar else None)
     
-    # Image logic for slash command
+    # Image logic for slash command (karys.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    if not os.path.exists(image_path):
-         image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    image_path = os.path.join(bot_dir, "karys.png")
     
     view = TicketButton(interaction.guild_id)
     
@@ -1164,13 +1144,9 @@ async def spotify_slash(interaction: discord.Interaction):
     
     embed.set_footer(text="Karys Shop • 100% Satisfaction 💚")
     
-    # Image handling logic
+    # Image handling logic (spotify.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "spotify.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "spotify.png")
+    image_path = os.path.join(bot_dir, "spotify.png")
     
     if os.path.exists(image_path):
         try:
@@ -1227,13 +1203,9 @@ async def nitro_slash(interaction: discord.Interaction):
     
     embed.set_footer(text="Karys Shop • Trusted Service 💎")
     
-    # Image handling logic
+    # Image handling logic (nitro.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "nitro.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "nitro.png")
+    image_path = os.path.join(bot_dir, "nitro.png")
     
     view = TicketButton(interaction.guild_id)
     
@@ -1310,13 +1282,9 @@ async def boost_slash(interaction: discord.Interaction):
     
     embed.set_footer(text="Karys Shop • High Quality Boosts 💎")
     
-    # Image handling logic
+    # Image handling logic (boost.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "boost.png")
-    
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "boost.png")
+    image_path = os.path.join(bot_dir, "boost.png")
     
     view = TicketButton(interaction.guild_id)
     
@@ -1391,16 +1359,10 @@ def create_price_post():
 async def post(interaction: discord.Interaction):
     """Slash command to post price list"""
     embed = create_price_post()
-    # Add KARYS SHOP promotional image from local file
+    # Add KARYS SHOP promotional image from local file (karys.png in current dir)
     # Get the directory where bot.py is located
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    # Try to find image in parent directory (project root)
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    
-    # If not found, try in current directory
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    image_path = os.path.join(bot_dir, "karys.png")
     
     if os.path.exists(image_path):
         print(f"[INFO] Found image at: {image_path}")
@@ -1413,8 +1375,6 @@ async def post(interaction: discord.Interaction):
             print(f"[SUCCESS] Image sent successfully")
         except Exception as e:
             print(f"[ERROR] Failed to send image: {e}")
-            import traceback
-            traceback.print_exc()
             # Try sending without image
             view = TicketButton(interaction.guild_id)
             await interaction.response.send_message(embed=embed, view=view)
@@ -1427,16 +1387,10 @@ async def post(interaction: discord.Interaction):
 async def post_command(ctx):
     """Create price list post"""
     embed = create_price_post()
-    # Add KARYS SHOP promotional image from local file
+    # Add KARYS SHOP promotional image from local file (karys.png in current dir)
     # Get the directory where bot.py is located
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    # Try to find image in parent directory (project root)
-    parent_dir = os.path.dirname(bot_dir)
-    image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    
-    # If not found, try in current directory
-    if not os.path.exists(image_path):
-        image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    image_path = os.path.join(bot_dir, "karys.png")
     
     view = TicketButton(ctx.guild.id)
     if os.path.exists(image_path):
@@ -1449,8 +1403,6 @@ async def post_command(ctx):
             print(f"[SUCCESS] Image sent successfully")
         except Exception as e:
             print(f"[ERROR] Failed to send image: {e}")
-            import traceback
-            traceback.print_exc()
             # Try sending without image
             await ctx.send(embed=embed, view=view)
     else:
@@ -1517,13 +1469,9 @@ async def payment(ctx):
     
     embed.set_footer(text="Karys Shop | Trusted & Secure 🔒", icon_url=bot.user.avatar.url if bot.user.avatar else None)
     
-    # Image handling logic
+    # Image handling logic (karys.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    # Use karys.png as default branding
-    karys_image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    if not os.path.exists(karys_image_path):
-         karys_image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    karys_image_path = os.path.join(bot_dir, "karys.png")
 
     view = TicketButton(ctx.guild.id)
     
@@ -1656,18 +1604,13 @@ async def vbucks(ctx):
     
     # Image handling logic
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
     
-    # User requested specific image: IMG/image.png
-    image_path = os.path.join(parent_dir, "IMG", "image.png")
-    if not os.path.exists(image_path):
-         image_path = os.path.join(bot_dir, "IMG", "image.png")
+    # User requested specific image: image.png for vbucks
+    image_path = os.path.join(bot_dir, "image.png")
     
     # Fallback to vbucks.png if image.png doesn't exist (safety)
     if not os.path.exists(image_path):
-         image_path = os.path.join(parent_dir, "IMG", "vbucks.png")
-         if not os.path.exists(image_path):
-              image_path = os.path.join(bot_dir, "IMG", "vbucks.png")
+         image_path = os.path.join(bot_dir, "vbucks.png")
 
     view = TicketButton(ctx.guild.id)
     
@@ -1721,20 +1664,15 @@ async def vbucks_slash(interaction: discord.Interaction):
     
     embed.set_footer(text="Karys Shop | Fortnite Services 🛒", icon_url=interaction.client.user.avatar.url if interaction.client.user.avatar else None)
     
-    # Image handling logic
+    # Image handling logic (image.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
     
-    # User requested specific image: IMG/image.png
-    image_path = os.path.join(parent_dir, "IMG", "image.png")
-    if not os.path.exists(image_path):
-         image_path = os.path.join(bot_dir, "IMG", "image.png")
+    # User requested specific image: image.png for vbucks
+    image_path = os.path.join(bot_dir, "image.png")
     
     # Fallback to vbucks.png if image.png doesn't exist
     if not os.path.exists(image_path):
-         image_path = os.path.join(parent_dir, "IMG", "vbucks.png")
-         if not os.path.exists(image_path):
-              image_path = os.path.join(bot_dir, "IMG", "vbucks.png")
+         image_path = os.path.join(bot_dir, "vbucks.png")
     
     view = TicketButton(interaction.guild_id)
     
@@ -1946,12 +1884,9 @@ async def ticket_panel(ctx):
         color=0xFF0000
     )
     
-    # Image handling logic
+    # Image handling logic (karys.png in current dir)
     bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    karys_image_path = os.path.join(parent_dir, "IMG", "karys.png")
-    if not os.path.exists(karys_image_path):
-         karys_image_path = os.path.join(bot_dir, "IMG", "karys.png")
+    karys_image_path = os.path.join(bot_dir, "karys.png")
     
     if os.path.exists(karys_image_path):
         try:
