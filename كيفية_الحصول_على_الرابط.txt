@@ -1,0 +1,27 @@
+═══════════════════════════════════════════════════════════
+  كيفية الحصول على رابط إضافة البوت إلى Discord
+═══════════════════════════════════════════════════════════
+
+الطريقة السريعة:
+
+1. اذهب إلى: https://discord.com/developers/applications
+2. اختر تطبيق "Karys Shop"
+3. اذهب إلى "General Information"
+4. انسخ "Application ID" (Client ID) - رقم طويل مثل: 123456789012345678
+
+5. استخدم هذا الرابط (بدل CLIENT_ID بالرقم الذي نسخته):
+
+https://discord.com/api/oauth2/authorize?client_id=CLIENT_ID&permissions=83968&scope=bot%20applications.commands
+
+مثال:
+إذا كان Client ID هو: 1466946766334070947
+الرابط يكون:
+https://discord.com/api/oauth2/authorize?client_id=1466946766334070947&permissions=83968&scope=bot%20applications.commands
+
+═══════════════════════════════════════════════════════════
+
+أو استخدم السكريبت:
+- شغل: get_invite.bat
+- الصق Client ID عندما يطلب منك
+
+═══════════════════════════════════════════════════════════
