@@ -4,6 +4,8 @@ import asyncio
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
+import json
+import random
 
 # Load environment variables
 load_dotenv()
@@ -35,6 +37,86 @@ VBUCKS_PRICES = {
     "25000": "1000",
     "50000": "1800"
 }
+
+# --- Data Management ---
+def load_data(filename):
+    try:
+        with open(filename, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def save_data(filename, data):
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4)
+
+# Load data on startup
+invites_data = load_data('invites.json') # Structure: {"user_id": {"regular": 0, "fake": 0, "bonus": 0, "leaves": 0}}
+giveaways_data = load_data('giveaways.json')
+invite_cache = {} # Cache for tracking invite uses
+
+def get_invites(user_id):
+    user_id = str(user_id)
+    if user_id not in invites_data:
+        invites_data[user_id] = {"regular": 0, "fake": 0, "bonus": 0, "leaves": 0}
+    
+    data = invites_data[user_id]
+    total = (data["regular"] + data["bonus"]) - (data["leaves"] + data["fake"])
+    return total if total > 0 else 0
+
+# --- Giveaway System ---
+class GiveawayJoinButton(discord.ui.View):
+    def __init__(self, message_id, required_invites):
+        super().__init__(timeout=None)
+        self.message_id = str(message_id)
+        self.required_invites = required_invites
+
+    @discord.ui.button(label="🎉 Join Giveaway", style=discord.ButtonStyle.green, custom_id="join_giveaway_btn")
+    async def join_giveaway(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Determine giveaway ID from message
+        giveaway_id = str(interaction.message.id)
+        
+        # Check if giveaway exists
+        if giveaway_id not in giveaways_data:
+            await interaction.response.send_message("❌ This giveaway has ended or does not exist.", ephemeral=True)
+            return
+
+        giveaway = giveaways_data[giveaway_id]
+        
+        if giveaway["ended"]:
+            await interaction.response.send_message("❌ This giveaway has already ended.", ephemeral=True)
+            return
+
+        user_id = str(interaction.user.id)
+        
+        # Check if already joined
+        if user_id in giveaway["participants"]:
+            await interaction.response.send_message("⚠️ You have already joined this giveaway!", ephemeral=True)
+            return
+
+        # Check invites
+        user_invites = get_invites(user_id)
+        if user_invites < self.required_invites:
+            await interaction.response.send_message(f"❌ You need **{self.required_invites}** invites to join. You currently have **{user_invites}**.", ephemeral=True)
+            return
+
+        # Add to participants
+        giveaway["participants"].append(user_id)
+        save_data('giveaways.json', giveaways_data)
+        
+        # Update Embed count
+        embed = interaction.message.embeds[0]
+        field_index = -1
+        for i, field in enumerate(embed.fields):
+            if "Entries" in field.name:
+                field_index = i
+                break
+        
+        if field_index != -1:
+            embed.set_field_at(field_index, name="👥 Entries", value=str(len(giveaway["participants"])), inline=True)
+            await interaction.message.edit(embed=embed)
+
+        await interaction.response.send_message(f"✅ You successfully joined the giveaway! (Invites: {user_invites})", ephemeral=True)
 
 class TicketButton(discord.ui.View):
     def __init__(self, guild_id):
@@ -502,6 +584,20 @@ async def on_ready():
     bot.add_view(ServiceView())
     bot.add_view(TicketAdminView())
     bot.add_view(TicketCloseConfirmationView())
+    
+
+    
+    # Reload active giveaways
+    for giveaway_id, data in giveaways_data.items():
+        if not data["ended"]:
+            bot.add_view(GiveawayJoinButton(giveaway_id, data["required_invites"]))
+            
+    # Initialize invite cache
+    for guild in bot.guilds:
+        try:
+            invite_cache[guild.id] = await guild.invites()
+        except:
+            pass
     
     try:
         synced = await bot.tree.sync()
@@ -1899,6 +1995,294 @@ async def ticket_panel(ctx):
     else:
         # Fallback to just embed
         await ctx.send(embed=embed, view=TicketSystemView())
+
+
+# --- Giveaway Commands ---
+
+@bot.tree.command(name="invites", description="Check your invites or another user's")
+async def invites(interaction: discord.Interaction, member: discord.Member = None):
+    target = member or interaction.user
+    user_id = str(target.id)
+    
+    if user_id not in invites_data:
+        invites_data[user_id] = {"regular": 0, "fake": 0, "bonus": 0, "leaves": 0}
+        
+    data = invites_data[user_id]
+    total = (data["regular"] + data["bonus"]) - (data["leaves"] + data["fake"])
+    if total < 0: total = 0
+    
+    embed = discord.Embed(title=f"✉️ Invites for {target.name}", color=0x3498DB)
+    embed.add_field(name="Total Valid", value=f"**{total}**", inline=False)
+    embed.add_field(name="Details", value=f"✅ Regular: {data['regular']}\n🎁 Bonus: {data['bonus']}\n🚪 Left: {data['leaves']}\n❌ Fake: {data['fake']}", inline=False)
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="giveaway", description="Manage Giveaways (Admin Only)")
+@discord.app_commands.describe(
+    action="create / end / reroll / list / chance",
+    duration="Duration (e.g. 10m, 1h, 1d) (For create)",
+    winners="Number of winners (For create/reroll)",
+    prize="Prize description (For create)",
+    required_invites="Invites required to join (For create)",
+    message_id="Message ID of the giveaway (For end/reroll/list)",
+    user="User to manage chances (For chance)",
+    amount="Amount of chances to add (For chance)"
+)
+async def giveaway(interaction: discord.Interaction, action: str, duration: str = None, winners: int = 1, prize: str = None, required_invites: int = 0, message_id: str = None, user: discord.Member = None, amount: int = None):
+    
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
+        return
+
+    if action == "create":
+        if not duration or not prize:
+            await interaction.response.send_message("❌ Usage: `/giveaway create <duration> <winners> <prize> [invites]`", ephemeral=True)
+            return
+            
+        # Parse duration
+        time_units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+        try:
+            unit = duration[-1]
+            value = int(duration[:-1])
+            if unit not in time_units:
+                raise ValueError
+            seconds = value * time_units[unit]
+        except:
+             await interaction.response.send_message("❌ Invalid duration format. Use 10m, 1h, 1d etc.", ephemeral=True)
+             return
+
+        end_time = datetime.now() + timedelta(seconds=seconds)
+        timestamp = int(end_time.timestamp())
+        
+        embed = discord.Embed(title=f"🎉 **GIVEAWAY: {prize}** 🎉", description=f"React to join!\n\n**Ends:** <t:{timestamp}:R>", color=0xFF00FF)
+        embed.add_field(name="🏆 Winners", value=str(winners), inline=True)
+        embed.add_field(name="📨 Required Invites", value=str(required_invites), inline=True)
+        embed.add_field(name="👥 Entries", value="0", inline=True)
+        embed.add_field(name="Hosted By", value=interaction.user.mention, inline=False)
+        embed.set_footer(text=f"Ends at")
+        embed.timestamp = end_time
+        
+        await interaction.response.send_message("🎉 Giveaway created!", ephemeral=True)
+        message = await interaction.channel.send(embed=embed)
+        
+        # Save giveaway
+        giveaways_data[str(message.id)] = {
+            "channel_id": interaction.channel_id,
+            "prize": prize,
+            "winners": winners,
+            "required_invites": required_invites,
+            "end_time": timestamp,
+            "participants": [],
+            "ended": False
+        }
+        save_data('giveaways.json', giveaways_data)
+        
+        # Add View
+        await message.edit(view=GiveawayJoinButton(message.id, required_invites))
+        
+        # Background task to end giveaway
+        async def end_giveaway_task():
+            await asyncio.sleep(seconds)
+            await end_giveaway_logic(message.id)
+
+        asyncio.create_task(end_giveaway_task())
+
+    elif action == "end":
+        if not message_id:
+            await interaction.response.send_message("❌ Please provide the Message ID.", ephemeral=True)
+            return
+        await end_giveaway_logic(int(message_id))
+        await interaction.response.send_message("✅ Giveaway process triggered.", ephemeral=True)
+
+    elif action == "reroll":
+        if not message_id:
+            await interaction.response.send_message("❌ Please provide the Message ID.", ephemeral=True)
+            return
+            
+        await reroll_giveaway(interaction, message_id, winners)
+
+    elif action == "list":
+        if not message_id:
+            await interaction.response.send_message("❌ Please provide the Message ID.", ephemeral=True)
+            return
+            
+        if message_id not in giveaways_data:
+             await interaction.response.send_message("❌ Giveaway not found.", ephemeral=True)
+             return
+             
+        participants = giveaways_data[message_id]["participants"]
+        await interaction.response.send_message(f"📂 **Participants ({len(participants)}):**\n" + ", ".join([f"<@{uid}>" for uid in participants[:50]]) + (f"... and {len(participants)-50} more" if len(participants) > 50 else ""), ephemeral=True)
+
+    elif action == "chance":
+        if not user or amount is None:
+             await interaction.response.send_message("❌ Usage: `/giveaway chance @user <amount>`", ephemeral=True)
+             return
+        
+        user_id = str(user.id)
+        if user_id not in invites_data:
+            invites_data[user_id] = {"regular": 0, "fake": 0, "bonus": 0, "leaves": 0}
+            
+        invites_data[user_id]["bonus"] += amount
+        save_data('invites.json', invites_data)
+        
+        await interaction.response.send_message(f"✅ Added **{amount}** bonus chances to {user.mention}. Total Bonus: {invites_data[user_id]['bonus']}", ephemeral=True)
+
+async def end_giveaway_logic(message_id):
+    message_id = str(message_id)
+    if message_id not in giveaways_data or giveaways_data[message_id]["ended"]:
+        return
+
+    data = giveaways_data[message_id]
+    channel = bot.get_channel(data["channel_id"])
+    
+    if channel:
+        try:
+            message = await channel.fetch_message(int(message_id))
+            
+            # Select winners
+            participants = data["participants"]
+            winners_count = data["winners"]
+            
+            if not participants:
+                await message.reply("❌ **Giveaway Ended:** No one joined.")
+                data["ended"] = True
+                save_data('giveaways.json', giveaways_data)
+                return
+
+            # Logic for chances: Simple pool expansion (User ID * Chance)
+            weighted_pool = []
+            for uid in participants:
+                # Base chance = 1
+                chance = 1
+                if uid in invites_data:
+                    chance += invites_data[uid]["bonus"]
+                
+                # Check for negative?
+                if chance < 1: chance = 1 
+                
+                # Add to pool
+                weighted_pool.extend([uid] * chance)
+            
+            winners = []
+            if len(participants) < winners_count:
+                winners = participants # Everyone wins
+            else:
+                 try:
+                     temp_pool = weighted_pool.copy()
+                     for _ in range(winners_count):
+                         if not temp_pool: break
+                         winner = random.choice(temp_pool)
+                         winners.append(winner)
+                         temp_pool = [x for x in temp_pool if x != winner]
+                 except:
+                     winners = [random.choice(participants)]
+
+            winners_mentions = ", ".join([f"<@{uid}>" for uid in winners])
+            
+            embed = message.embeds[0]
+            embed.color = 0x2ECC71
+            embed.title = "🎉 **GIVEAWAY ENDED** 🎉"
+            embed.description = f"**Prize:** {data['prize']}\n**Winners:** {winners_mentions}"
+            embed.set_footer(text="Ended")
+            
+            await message.edit(embed=embed, view=None) # Remove button
+            await message.reply(f"🎉 **Congratulations** {winners_mentions}! You won **{data['prize']}**!")
+            
+            data["ended"] = True
+            data["winners_list"] = winners
+            save_data('giveaways.json', giveaways_data)
+
+        except Exception as e:
+            print(f"Error ending giveaway: {e}")
+
+async def reroll_giveaway(interaction, message_id, winners_count):
+    message_id = str(message_id)
+    if message_id not in giveaways_data:
+        await interaction.response.send_message("❌ Giveaway not found.", ephemeral=True)
+        return
+
+    data = giveaways_data[message_id]
+    participants = data["participants"]
+    
+    if not participants:
+        await interaction.response.send_message("❌ No participants to reroll.", ephemeral=True)
+        return
+
+    # Weighted Logic again
+    weighted_pool = []
+    for uid in participants:
+        chance = 1
+        if uid in invites_data:
+            chance += invites_data[uid]["bonus"]
+        if chance < 1: chance = 1 
+        weighted_pool.extend([uid] * chance)
+    
+    winners = []
+    temp_pool = weighted_pool.copy()
+    
+    for _ in range(winners_count):
+        if not temp_pool: break
+        winner = random.choice(temp_pool)
+        winners.append(winner)
+        temp_pool = [x for x in temp_pool if x != winner]
+
+    winners_mentions = ", ".join([f"<@{uid}>" for uid in winners])
+    await interaction.channel.send(f"🎉 **New Winner(s):** {winners_mentions}!")
+    
+    await interaction.response.send_message("✅ Rerolled.", ephemeral=True)
+
+
+# --- Invite Tracking Events ---
+
+@bot.event
+async def on_invite_create(invite):
+    if invite.guild.id not in invite_cache:
+        invite_cache[invite.guild.id] = []
+    # Refresh cache for this guild
+    invite_cache[invite.guild.id] = await invite.guild.invites()
+
+@bot.event
+async def on_invite_delete(invite):
+    if invite.guild.id in invite_cache:
+        invite_cache[invite.guild.id] = await invite.guild.invites()
+
+@bot.event
+async def on_member_join(member):
+    # Find inviter
+    inviter = None
+    try:
+        current_invites = await member.guild.invites()
+        cached_invites = invite_cache.get(member.guild.id, [])
+        
+        for invite in current_invites:
+            for cached in cached_invites:
+                if invite.code == cached.code and invite.uses > cached.uses:
+                    inviter = invite.inviter
+                    break
+            if inviter: break
+        
+        invite_cache[member.guild.id] = current_invites
+        
+        if inviter:
+            inviter_id = str(inviter.id)
+            if inviter_id not in invites_data:
+                invites_data[inviter_id] = {"regular": 0, "fake": 0, "bonus": 0, "leaves": 0}
+            
+            # Check for fake (account age < 3 days?)
+            if (datetime.now(timezone.utc) - member.created_at).days < 3:
+                invites_data[inviter_id]["fake"] += 1
+            else:
+                invites_data[inviter_id]["regular"] += 1
+                
+            save_data('invites.json', invites_data)
+            
+    except Exception as e:
+        print(f"Error tracking invite: {e}")
+
+@bot.event
+async def on_member_remove(member):
+    # Optional: Track leaves
+    pass
 
 
 # Run the bot
