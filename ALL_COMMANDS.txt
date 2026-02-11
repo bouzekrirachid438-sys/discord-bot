@@ -1,0 +1,131 @@
+____________________________________________________
+🤖 KARYS SHOP BOT - COMMAND LIST (قائمة الأوامر)
+____________________________________________________
+
+🔹 PUBLIC COMMANDS (Prefix: !)
+   (الأوامر العامة)
+
+1. !prices
+   Aliases: !p, !price, !prix, !cost
+   Description: Display Valorant Points price list.
+   (عرض قائمة أسعار نقاط فالورانت)
+
+2. !vbucks
+   Aliases: !vb, !fortnite, !vbuck, !فورتنايت
+   Description: Display Fortnite V-Bucks prices.
+   (عرض قائمة أسعار فيباكس فورتنايت)
+
+3. !nitro
+   Aliases: !discord_nitro, !نترو
+   Description: Display Discord Nitro Premium plans.
+   (عرض خطط ديسكورد نيترو)
+
+4. !spotify
+   Aliases: !spotify_plans, !سبوتيفاي
+   Description: Display Spotify Premium subscription plans.
+   (عرض خطط سبوتيفاي بريميوم)
+
+5. !boost
+   Aliases: !boosts, !server_boost, !بوست
+   Description: Display Server Boost prices.
+   (عرض أسعار بوست السيرفرات)
+
+6. !gift
+   Aliases: !gifting, !الهدايا, !هدايا
+   Description: Display Valorant Gifting Service details.
+   (عرض خدمة هدايا فالورانت)
+
+7. !payment
+   Aliases: !pay, !bank, !rib, !الدفع
+   Description: Display available payment methods (CIH, BMCE, Binance, etc.).
+   (عرض طرق الدفع المتوفرة)
+
+8. !stock
+   Aliases: !inventory
+   Description: Check stock availability.
+   (التحقق من حالة المخزون)
+
+9. !order [amount]
+   Example: !order 10000
+   Description: Start an order for a specific amount of VP.
+   (طلب كمية محددة من النقاط)
+
+10. !rules
+    Aliases: !terms
+    Description: Display buying terms and rules.
+    (عرض قوانين وشروط الشراء)
+
+11. !help_shop
+    Aliases: !shop_help
+    Description: Show the help menu with available commands.
+    (عرض قائمة المساعدة)
+
+____________________________________________________
+
+🔹 SLASH COMMANDS (/)
+   (أوامر السلاش - المدمجة في ديسكورد)
+
+1. /post
+   Description: Create and post the official price list embed (Admin/User).
+   (نشر قائمة الأسعار)
+
+2. /gift
+   Description: Display Gifting Announcement.
+   (عرض إعلان الهدايا)
+
+3. /spotify
+   Description: Display Spotify plans.
+   (عرض خطط سبوتيفاي)
+
+4. /nitro
+   Description: Display Nitro plans.
+   (عرض خطط نيترو)
+
+5. /boost
+   Description: Display Boost prices.
+   (عرض أسعار البوست)
+
+6. /vbucks
+   Description: Display V-Bucks prices.
+   (عرض أسعار الفيباكس)
+
+7. /payment
+   Description: Show Payment Methods.
+   (عرض طرق الدفع)
+
+____________________________________________________
+
+👮 ADMIN COMMANDS (Prefix: !)
+   (أوامر المسؤولين فقط)
+
+1. !post
+   Aliases: !منشور
+   Description: Create price list post (same as slash command but with prefix).
+   (نشر قائمة الأسعار)
+
+2. !ticket_panel
+   Description: Deploy the main Ticket Panel with buttons.
+   (نشر لوحة التذاكر الرئيسية للدعم والشراء)
+
+3. !setup_roles
+   Description: Create/Update shop roles (Mythic, Royalty, Prestige, etc.).
+   (إعداد رتب المتجر)
+
+4. !bdal "Old Name" "New Name"
+   Example: !bdal "Role A" "Role B"
+   Description: Change a role name quickly.
+   (تغيير اسم رتبة)
+
+5. !scan
+   Description: Scan for accounts created < 30 days ago and timeout them (Anti-Alt).
+   (فحص الحسابات الجديدة وحظرها مؤقتاً)
+
+6. !remove
+   Description: Remove timeouts from all members.
+   (إزالة الحظر المؤقت عن الجميع)
+
+7. !say [message]
+   Description: Make the bot speak the message.
+   (جعل البوت يكتب رسالة)
+
+____________________________________________________

@@ -241,7 +241,7 @@ class OrderModal(discord.ui.Modal):
         # Update the ticket name to reflect the order (optional)
         try:
             # Normalize service name for channel name
-            safe_service = self.service_name.lower().replace(' ', '-').replace('/', '-')
+            safe_service = self.service_name.lower().replace(' ', '-').replace('/', '-').replace('v-bucks', 'vbucks')
             new_name = f"order-{safe_service}-{interaction.user.name}"
             # Truncate to 100 chars just in case
             await interaction.channel.edit(name=new_name[:100])
@@ -304,7 +304,7 @@ class PackageOrderModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         try:
              # Rename channel to order
-            safe_item = self.item_str.split(':')[0].lower().replace(' ', '-')
+            safe_item = self.item_str.split(':')[0].lower().replace(' ', '-').replace('v-bucks', 'vbucks')
             await interaction.channel.edit(name=f"order-{safe_item}-{interaction.user.name}"[:100])
             
             # Move to Category
