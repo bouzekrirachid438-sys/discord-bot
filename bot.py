@@ -2018,7 +2018,7 @@ async def invites(interaction: discord.Interaction, member: discord.Member = Non
     
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="kgiveaway", description="Manage Giveaways (Admin Only)")
+@bot.tree.command(name="kgiveaway", description="Manage Giveaways")
 @discord.app_commands.describe(
     action="Select an action to perform",
     duration="Duration (e.g. 10m, 1h, 1d) (For create)",
@@ -2031,9 +2031,7 @@ async def invites(interaction: discord.Interaction, member: discord.Member = Non
 )
 async def kgiveaway(interaction: discord.Interaction, action: Literal["create", "end", "reroll", "list", "chance"], duration: str = None, winners: int = 1, prize: str = None, required_invites: int = 0, message_id: str = None, user: discord.Member = None, amount: int = None):
     
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
-        return
+
 
     if action == "create":
         if not duration or not prize:
