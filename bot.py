@@ -22,13 +22,15 @@ PRICE_LIST = {
     "1000": {"usd": 5.0, "dh": 50, "stock": False},
     "5000": {"usd": 25.0, "dh": 250, "stock": False},
     "10000": {"usd": 50.0, "dh": 500, "stock": True},
-    "12000": {"usd": 55.0, "dh": 550, "stock": True},
-    "13000": {"usd": 60.0, "dh": 600, "stock": True},
-    "14000": {"usd": 65.0, "dh": 650, "stock": True},
-    "16000": {"usd": 75.0, "dh": 750, "stock": True},
-    "18000": {"usd": 85.0, "dh": 850, "stock": True},
-    "20000": {"usd": 100.0, "dh": 1000, "stock": True},
-    "100000": {"usd": 450.0, "dh": 4500, "stock": True}
+    "11000": {"usd": 55.0, "dh": 550, "stock": True},
+    "12000": {"usd": 60.0, "dh": 600, "stock": True},
+    "13000": {"usd": 65.0, "dh": 650, "stock": True},
+    "14000": {"usd": 70.0, "dh": 700, "stock": True},
+    "15000": {"usd": 75.0, "dh": 750, "stock": True},
+    "16000": {"usd": 80.0, "dh": 800, "stock": True},
+    "18000": {"usd": 90.0, "dh": 900, "stock": True},
+    "20000": {"usd": 105.0, "dh": 1050, "stock": True},
+    "100000": {"usd": 455.0, "dh": 4550, "stock": True}
 }
 
 VBUCKS_PRICES = {
@@ -355,33 +357,26 @@ class PackageSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         package = self.values[0]
-        # Open Modal for notes only, since package is selected
-        modal = OrderModal(service_name=f"{self.service_type} - {package}", title="Confirm Order")
-        # Remove Quantity field since they picked a package, or keep it for "How many codes?" 
-        # For simplicity, we keep the original Modal but pre-fill or guide user.
-        # Actually creating a specific modal is cleaner.
-        
-        # specific modal for package
-        await interaction.response.send_modal(PackageOrderModal(f"{self.service_type}: {package}"))
+        # Open Payment Method Selection
+        await interaction.response.send_message(
+            f"You selected: **{self.service_type} - {package}**\nPlease select your payment method below:", 
+            view=PaymentMethodView(f"{self.service_type}: {package}"),
+            ephemeral=True
+        )
 
 class PackageOrderModal(discord.ui.Modal):
-    def __init__(self, title_str):
-        super().__init__(title="Payment & Delivery")
+    def __init__(self, title_str, payment_method):
+        super().__init__(title="Confirm Order Details")
         self.item_str = title_str
+        self.payment_method = payment_method
         
-        self.payment_method = discord.ui.TextInput(
-            label="Payment Method",
-            placeholder="CIH, Attijari, Binance, PayPal...",
-            required=True,
-            style=discord.TextStyle.short
-        )
+        # Payment method is already selected, so we just ask for notes/riot id
         self.notes = discord.ui.TextInput(
-            label="Notes / Riot ID (if applicable)",
-            placeholder="Riot ID for VP, Email for Nitro...",
+            label="Questions / Notes (أسئلة / ملاحظات)",
+            placeholder="Account Email / Riot ID / Special Requests...",
             required=False,
             style=discord.TextStyle.long
         )
-        self.add_item(self.payment_method)
         self.add_item(self.notes)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -396,6 +391,8 @@ class PackageOrderModal(discord.ui.Modal):
             
             if "VP" in self.item_str or "Valorant" in self.item_str:
                 category_name = "Valorant Orders"
+            elif "Gifting" in self.item_str:
+                category_name = "Gifting Orders"
             elif "Nitro" in self.item_str:
                 category_name = "Nitro Orders"
             elif "V-Bucks" in self.item_str:
@@ -416,21 +413,45 @@ class PackageOrderModal(discord.ui.Modal):
 
         embed = discord.Embed(title="📝 **Order Confirmed**", color=0x2ECC71, timestamp=datetime.now())
         embed.add_field(name="🛒 Item", value=f"**{self.item_str}**", inline=False)
-        embed.add_field(name="💳 Payment", value=str(self.payment_method.value), inline=True)
+        embed.add_field(name="💳 Payment Method", value=f"**{self.payment_method}**", inline=True)
+        
         if self.notes.value:
-            embed.add_field(name="🗒️ Notes", value=str(self.notes.value), inline=True)
+            embed.add_field(name="🗒️ Notes / Info", value=str(self.notes.value), inline=False)
         
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar.url if interaction.user.avatar else None)
-        embed.set_footer(text="Please verify payment details in the ticket.")
+        embed.set_footer(text="Please wait for an admin to handle your order.")
         
         await interaction.response.send_message(embed=embed)
         await interaction.channel.send(f"{interaction.user.mention} Order received! Support will process it shortly.")
+
+class PaymentSelect(discord.ui.Select):
+    def __init__(self, package_info):
+        self.package_info = package_info
+        options = [
+            discord.SelectOption(label="CIH Bank", emoji="🏦", description="Bank Transfer"),
+            discord.SelectOption(label="Attijariwafa Bank", emoji="🏦", description="Bank Transfer"),
+            discord.SelectOption(label="BMCE Bank", emoji="🏦", description="Bank Transfer"),
+            discord.SelectOption(label="Cash Plus", emoji="💸", description="Cash Transfer"),
+            discord.SelectOption(label="Binance (USDT)", emoji="🪙", description="Crypto Payment"),
+            discord.SelectOption(label="PayPal", emoji="💲", description="International Payment")
+        ]
+        super().__init__(placeholder="Select Payment Method...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        payment_method = self.values[0]
+        await interaction.response.send_modal(PackageOrderModal(self.package_info, payment_method))
+
+class PaymentMethodView(discord.ui.View):
+    def __init__(self, package_info):
+        super().__init__(timeout=60)
+        self.add_item(PaymentSelect(package_info))
 
 
 class ServiceSelect(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label="Valorant Points", emoji="<:vp:1466944483504427008>", description="VP Top-up for all regions", value="vp"),
+            discord.SelectOption(label="Valorant Gifting", emoji="🎁", description="Skins & Bundles Gifting Service", value="gifting"),
             discord.SelectOption(label="Discord Nitro", emoji="🚀", description="Nitro Boost, Classic, Basic", value="nitro"),
             discord.SelectOption(label="Fortnite V-Bucks", emoji="🎮", description="V-Bucks Top-up", value="vbucks"),
             discord.SelectOption(label="Other / Support", emoji="❓", description="General questions or other services", value="other")
@@ -467,6 +488,69 @@ class ServiceSelect(discord.ui.Select):
             view = discord.ui.View()
             view.add_item(PackageSelect("VP", options))
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+        elif service == "gifting":
+            embed = discord.Embed(
+                title="🎁 **OFFICIAL GIFTING SERVICE**",
+                description="**Get your favorite Valorant skins & bundles directly in-game!**\nWe offer a safe and instant gifting service.",
+                color=0xFF4654
+            )
+            
+            embed.add_field(
+                name="🆔 Riot ID to Add",
+                value="```\nGaprex#Karys\n```\n*Send a friend request to this ID to start.*",
+                inline=False
+            )
+            
+            embed.add_field(
+                name="⚠️ Important Note / ملاحظة مهمة",
+                value="**You must wait 7 days after adding us to receive the gift (Game Rule).**\n**يجب الانتظار 7 أيام بعد إضافة الحساب لاستلام الهدية (قانون اللعبة).**",
+                inline=False
+            )
+            
+            embed.set_footer(text="Karys Shop | Valorant Gifting Service")
+            
+            # Using same helper to reuse code if possible, or just copy/paste safe renaming
+            try:
+                # Rename channel to indicate gifting
+                await interaction.channel.edit(name=f"gift-{interaction.user.name}"[:100])
+                
+                # Move to Gifting Orders Category if exists
+                guild = interaction.guild
+                category = discord.utils.get(guild.categories, name="Gifting Orders")
+                if not category:
+                     overwrites = {
+                        guild.default_role: discord.PermissionOverwrite(view_channel=False)
+                     }
+                     category = await guild.create_category("Gifting Orders", overwrites=overwrites)
+                await interaction.channel.edit(category=category)
+            except:
+                pass
+                
+            # Pricing Options (60 DH / $6 per 1000 VP)
+            options = []
+            
+            # Generate options: 1k to 10k, then some larger ones
+            amounts = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000, 20000]
+            
+            for amount in amounts:
+                price_dh = int((amount / 1000) * 60)
+                price_usd = int((amount / 1000) * 6)
+                
+                label = f"{amount:,} VP"
+                description = f"{price_usd} $ | {price_dh} DH"
+                
+                options.append(discord.SelectOption(
+                    label=label,
+                    description=description,
+                    emoji="🎁"
+                ))
+                
+            view = discord.ui.View()
+            view.add_item(PackageSelect("Gifting", options))
+            
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
+            await interaction.channel.send(f"{interaction.user.mention} Please select your package below or ask for a custom amount!")
             
         elif service == "nitro":
             # Show Nitro Options
