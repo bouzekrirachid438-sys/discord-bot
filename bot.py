@@ -15,7 +15,11 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
+import uuid
+INSTANCE_ID = str(uuid.uuid4())[:8]
+
 
 # Price list data
 PRICE_LIST = {
@@ -279,8 +283,9 @@ class TicketCloseConfirmationView(discord.ui.View):
                     # Fallback to channel name suffix
                     safe_owner = channel.name.split('-')[-1]
                 
-                # "closedorder" stuck together as requested
-                new_name = f"closedorder-{safe_owner}"
+                # "closedorder" stuck together as requested + Date
+                date_str = datetime.now().strftime("%d%m") # DayMonth e.g. 1302
+                new_name = f"closedorder-{safe_owner}-{date_str}"
                 await channel.edit(name=new_name[:100])
             except Exception as e:
                 print(f"[WARNING] Rename failed (Rate Limit?): {e}")
@@ -350,6 +355,63 @@ class OrderModal(discord.ui.Modal):
         # Ping support/admin here if needed
         await interaction.channel.send(f"{interaction.user.mention} Thank you! Support will be with you shortly.")
 
+async def process_package_order(interaction: discord.Interaction, item_str, payment_method, notes=None):
+    try:
+        # Rename channel to order
+        safe_item = item_str.split(':')[0].lower().replace(' ', '-').replace('v-bucks', 'vbucks')
+        await interaction.channel.edit(name=f"order-{safe_item}-{interaction.user.name}"[:100])
+        
+        # Move to Category
+        guild = interaction.guild
+        category_name = "Orders" # Default
+        
+        if "VP" in item_str or "Valorant" in item_str:
+            category_name = "Valorant Orders"
+        elif "Gifting" in item_str:
+            category_name = "Gifting Orders"
+        elif "Nitro" in item_str:
+            category_name = "Nitro Orders"
+        elif "V-Bucks" in item_str:
+            category_name = "Fortnite Orders"
+            
+        category = discord.utils.get(guild.categories, name=category_name)
+        if not category:
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(view_channel=False)
+            }
+            category = await guild.create_category(category_name, overwrites=overwrites)
+        
+        await interaction.channel.edit(category=category)
+        
+    except Exception as e:
+        print(f"Error moving/renaming: {e}")
+        pass
+
+    # Enable writing for user after order
+    try:
+        await interaction.channel.set_permissions(interaction.user, view_channel=True, send_messages=True, read_message_history=True)
+    except Exception as e:
+        print(f"Error setting permissions after order: {e}")
+
+    embed = discord.Embed(title="📝 **Order Confirmed**", color=0x2ECC71, timestamp=datetime.now())
+    embed.add_field(name="🛒 Item", value=f"**{item_str}**", inline=False)
+    embed.add_field(name="💳 Payment Method", value=f"**{payment_method}**", inline=True)
+    
+    if notes:
+        embed.add_field(name="🗒️ Notes / Info", value=str(notes), inline=False)
+    
+    embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar.url if interaction.user.avatar else None)
+    embed.set_footer(text="Please wait for an admin to handle your order.")
+    
+    # Check if interaction is deferred or responded to
+    if interaction.response.is_done():
+        await interaction.followup.send(embed=embed)
+    else:
+        await interaction.response.send_message(embed=embed)
+        
+    await interaction.channel.send(f"{interaction.user.mention} Order received! Support will process it shortly.")
+
+
 class PackageSelect(discord.ui.Select):
     def __init__(self, service_type, options):
         self.service_type = service_type
@@ -357,6 +419,19 @@ class PackageSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         package = self.values[0]
+
+        # Check stock for Valorant Points
+        if self.service_type == "VP":
+            # Extract amount from label (e.g., "1,000 VP" -> "1000")
+            amount_str = package.replace(" VP", "").replace(",", "")
+            
+            if amount_str in PRICE_LIST and not PRICE_LIST[amount_str]["stock"]:
+                await interaction.response.send_message(
+                    "❌ **This package is currently Out of Stock!**\nPlease select a different package that is available.",
+                    ephemeral=True
+                )
+                return
+
         # Open Payment Method Selection
         await interaction.response.send_message(
             f"You selected: **{self.service_type} - {package}**\nPlease select your payment method below:", 
@@ -411,6 +486,12 @@ class PackageOrderModal(discord.ui.Modal):
             print(f"Error moving/renaming: {e}")
             pass
 
+        # Enable writing for user after order
+        try:
+            await interaction.channel.set_permissions(interaction.user, view_channel=True, send_messages=True, read_message_history=True)
+        except Exception as e:
+            print(f"Error setting permissions after order: {e}")
+
         embed = discord.Embed(title="📝 **Order Confirmed**", color=0x2ECC71, timestamp=datetime.now())
         embed.add_field(name="🛒 Item", value=f"**{self.item_str}**", inline=False)
         embed.add_field(name="💳 Payment Method", value=f"**{self.payment_method}**", inline=True)
@@ -439,7 +520,9 @@ class PaymentSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         payment_method = self.values[0]
-        await interaction.response.send_modal(PackageOrderModal(self.package_info, payment_method))
+        # Bypass modal and process order directly
+        await process_package_order(interaction, self.package_info, payment_method)
+        # await interaction.response.send_modal(PackageOrderModal(self.package_info, payment_method))
 
 class PaymentMethodView(discord.ui.View):
     def __init__(self, package_info):
@@ -460,6 +543,11 @@ class ServiceSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         service = self.values[0]
+
+        # Disable the dropdown to prevent changing selection
+        self.disabled = True
+        self.placeholder = "Service Selected"
+        await interaction.message.edit(view=self.view)
         
         if service == "vp":
             # Show VP Options
@@ -512,9 +600,6 @@ class ServiceSelect(discord.ui.Select):
             
             # Using same helper to reuse code if possible, or just copy/paste safe renaming
             try:
-                # Rename channel to indicate gifting
-                await interaction.channel.edit(name=f"gift-{interaction.user.name}"[:100])
-                
                 # Move to Gifting Orders Category if exists
                 guild = interaction.guild
                 category = discord.utils.get(guild.categories, name="Gifting Orders")
@@ -584,8 +669,6 @@ class ServiceSelect(discord.ui.Select):
         else:
             # "Other" - No Modal, just prompt user to speak in chat
             try:
-                await interaction.channel.edit(name=f"support-{interaction.user.name}"[:100])
-                
                 # Move to Support Category
                 guild = interaction.guild
                 category = discord.utils.get(guild.categories, name="Support Tickets")
@@ -604,6 +687,13 @@ class ServiceSelect(discord.ui.Select):
                 description="Please describe your Request / Issue directly in this chat.\nSupport will be with you shortly!",
                 color=0x95A5A6
             )
+            
+            # Enable writing for user
+            try:
+                await interaction.channel.set_permissions(interaction.user, view_channel=True, send_messages=True, read_message_history=True)
+            except Exception as e:
+                print(f"Error setting permissions for Other: {e}")
+
             await interaction.response.send_message(embed=embed)
 
 class ServiceView(discord.ui.View):
@@ -638,7 +728,7 @@ class TicketSystemView(discord.ui.View):
 
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=False, read_message_history=True),
             guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
         }
 
@@ -646,7 +736,7 @@ class TicketSystemView(discord.ui.View):
         
         embed = discord.Embed(
             title=f"👋 Welcome {interaction.user.name}!",
-            description="Please select the service you are interested in from the menu below.",
+            description="### ⚠️ Action Required / مطلوب إجراء\n**Please select the service you want from the menu below to proceed.**\n**3afak khtar service li bghiti mn la liste lte7t bach nkml m3ak.** 👇",
             color=0x2ECC71
         )
         
@@ -665,7 +755,7 @@ async def on_ready():
         print("Bot reconnected - skipping setup.")
         return
     print(f'Logged in as {bot.user.name}')
-    print('Bot is ready!')
+    print(f'Bot is ready! Instance ID: {INSTANCE_ID}')
     
     # Set Status
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Karys Shop | !help_shop"))
@@ -2029,7 +2119,10 @@ async def change_role_name_error(ctx, error):
 @commands.has_permissions(administrator=True)
 async def say(ctx, *, message):
     """Make the bot say something"""
-    await ctx.message.delete()
+    try:
+        await ctx.message.delete()
+    except:
+        pass
     await ctx.send(message)
 
 
@@ -2040,7 +2133,10 @@ async def say(ctx, *, message):
 @commands.has_permissions(administrator=True)
 async def ticket_panel(ctx):
     """Deploy the ticket panel"""
-    await ctx.message.delete()
+    try:
+        await ctx.message.delete()
+    except:
+        pass
     embed = discord.Embed(
         title="🛒 **KARYS SHOP | SUPPORT & ORDERS**",
         description=(
@@ -2067,9 +2163,52 @@ async def ticket_panel(ctx):
         except Exception as e:
             print(f"[ERROR] Failed to send image: {e}")
             await ctx.send(embed=embed, view=TicketSystemView())
+
+@bot.tree.command(name="ticket_panel", description="Deploy the ticket panel (Admin Only)")
+async def ticket_panel_slash(interaction: discord.Interaction):
+    """Slash command to deploy ticket panel"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+        
+    await interaction.response.defer()
+    await interaction.delete_original_response() # Delete the "thinking" message if possible or just send new one
+    
+    # Actually we want to send a new message that stays, so we shouldn't delete original response if we used defer()
+    # But for a panel, we usually want it to look clean. Slash commands always leave a trace unless ephemeral.
+    # Let's just send the panel as a new message.
+    
+    embed = discord.Embed(
+        title="🛒 **KARYS SHOP | SUPPORT & ORDERS**",
+        description=(
+            "**Welcome to Karys Shop!** 🌟\n"
+            "مرحباً بكم في متجر كاريس! 🇲🇦\n\n"
+            "**Open a ticket for:**\n"
+            "💸 **Buying & Selling** (Accounts, Points, Nitro)\n"
+            "🛠️ **Support & Assistance**\n"
+            "🤝 **Business Inquiries**\n\n"
+            "*Click the button below to start your transaction!* 📩"
+        ),
+        color=0xFF0000
+    )
+    
+    # Image handling logic (karys.png in current dir)
+    bot_dir = os.path.dirname(os.path.abspath(__file__))
+    karys_image_path = os.path.join(bot_dir, "karys.png")
+    
+    channel = interaction.channel
+    
+    if os.path.exists(karys_image_path):
+        try:
+            file = discord.File(karys_image_path, filename="karys.png")
+            embed.set_thumbnail(url="attachment://karys.png")
+            await channel.send(embed=embed, file=file, view=TicketSystemView())
+        except Exception as e:
+            print(f"[ERROR] Failed to send image: {e}")
+            await channel.send(embed=embed, view=TicketSystemView())
     else:
         # Fallback to just embed
-        await ctx.send(embed=embed, view=TicketSystemView())
+        await channel.send(embed=embed, view=TicketSystemView())
 
 
 # --- Utility Commands ---
@@ -2440,4 +2579,10 @@ if __name__ == "__main__":
         print("Error: DISCORD_BOT_TOKEN not found in environment variables!")
         print("Please create a .env file with your bot token.")
     else:
-        bot.run(token)
+        try:
+            bot.run(token)
+        except Exception as e:
+            print(f"CRITICAL ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            input("Press Enter to exit...")
