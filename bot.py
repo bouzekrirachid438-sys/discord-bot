@@ -243,16 +243,38 @@ class TicketCloseConfirmationView(discord.ui.View):
             except:
                 pass
             
-            # Get Logs Category
-            category = discord.utils.get(guild.categories, name="Ticket Logs") or discord.utils.get(guild.categories, name="Logs")
-            if not category:
-                overwrites = {
-                    guild.default_role: discord.PermissionOverwrite(view_channel=False)
-                }
-                category = await guild.create_category("Ticket Logs", overwrites=overwrites)
+            # Get Logs Category with Rolling Logic (Ticket Logs -> Ticket Logs1 -> Ticket Logs2 ...)
+            log_category_names = ["Ticket Logs", "Ticket Logs1", "Ticket Logs2", "Ticket Logs3", "Ticket Logs4", "Ticket Logs5"]
+            target_category = None
+
+            for cat_name in log_category_names:
+                category = discord.utils.get(guild.categories, name=cat_name)
+                
+                if category:
+                    # Check if full (50 channels max)
+                    if len(category.channels) < 50:
+                        target_category = category
+                        break
+                else:
+                    # Category doesn't exist, create it and use it
+                    overwrites = {
+                        guild.default_role: discord.PermissionOverwrite(view_channel=False)
+                    }
+                    target_category = await guild.create_category(cat_name, overwrites=overwrites)
+                    break
             
+            # Fallback if all are full (use the last one or default)
+            if not target_category:
+                target_category = discord.utils.get(guild.categories, name="Ticket Logs5")
+                if not target_category:
+                     # Should have been created in loop, but just in case
+                     overwrites = {
+                        guild.default_role: discord.PermissionOverwrite(view_channel=False)
+                    }
+                     target_category = await guild.create_category("Ticket Logs5", overwrites=overwrites)
+
             # Step 1: Move category (Critical)
-            await channel.edit(category=category)
+            await channel.edit(category=target_category)
             
             # Step 2: Remove permissions (Security)
             for target, overwrite in channel.overwrites.items():
