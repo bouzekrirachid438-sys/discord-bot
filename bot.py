@@ -387,10 +387,10 @@ async def process_package_order(interaction: discord.Interaction, item_str, paym
         guild = interaction.guild
         category_name = "Orders" # Default
         
-        if "VP" in item_str or "Valorant" in item_str:
-            category_name = "Valorant Orders"
-        elif "Gifting" in item_str:
+        if "Gifting" in item_str:
             category_name = "Gifting Orders"
+        elif "VP" in item_str or "Valorant" in item_str:
+            category_name = "Valorant Orders"
         elif "Nitro" in item_str:
             category_name = "Nitro Orders"
         elif "V-Bucks" in item_str:
@@ -486,10 +486,10 @@ class PackageOrderModal(discord.ui.Modal):
             guild = interaction.guild
             category_name = "Orders" # Default
             
-            if "VP" in self.item_str or "Valorant" in self.item_str:
-                category_name = "Valorant Orders"
-            elif "Gifting" in self.item_str:
+            if "Gifting" in self.item_str:
                 category_name = "Gifting Orders"
+            elif "VP" in self.item_str or "Valorant" in self.item_str:
+                category_name = "Valorant Orders"
             elif "Nitro" in self.item_str:
                 category_name = "Nitro Orders"
             elif "V-Bucks" in self.item_str:
@@ -2607,4 +2607,4 @@ if __name__ == "__main__":
             print(f"CRITICAL ERROR: {e}")
             import traceback
             traceback.print_exc()
-            input("Press Enter to exit...")
+            # input("Press Enter to exit...") # Removed to prevent EOFError in non-interactive environments
