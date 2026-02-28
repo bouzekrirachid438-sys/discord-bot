@@ -244,7 +244,7 @@ class TicketCloseConfirmationView(discord.ui.View):
                 pass
             
             # Get Logs Category with Rolling Logic (Ticket Logs -> Ticket Logs1 -> Ticket Logs2 ...)
-            log_category_names = ["Ticket Logs", "Ticket Logs1", "Ticket Logs2", "Ticket Logs3", "Ticket Logs4", "Ticket Logs5"]
+            log_category_names = ["Ticket Logs", "Ticket Logs1", "Ticket Logs2", "Ticket Logs3", "Ticket Logs4", "Ticket Logs5", "Ticket Logs6", "Ticket Logs7", "Ticket Logs8", "Ticket Logs9", "Ticket Logs10", "Ticket Logs11", "Ticket Logs12", "Ticket Logs13", "Ticket Logs14", "Ticket Logs15"]
             target_category = None
 
             for cat_name in log_category_names:
@@ -265,13 +265,13 @@ class TicketCloseConfirmationView(discord.ui.View):
             
             # Fallback if all are full (use the last one or default)
             if not target_category:
-                target_category = discord.utils.get(guild.categories, name="Ticket Logs5")
+                target_category = discord.utils.get(guild.categories, name="Ticket Logs15")
                 if not target_category:
                      # Should have been created in loop, but just in case
                      overwrites = {
                         guild.default_role: discord.PermissionOverwrite(view_channel=False)
                     }
-                     target_category = await guild.create_category("Ticket Logs5", overwrites=overwrites)
+                     target_category = await guild.create_category("Ticket Logs15", overwrites=overwrites)
 
             # Step 1: Move category (Critical)
             await channel.edit(category=target_category)
@@ -607,8 +607,12 @@ class ServiceSelect(discord.ui.Select):
             )
             
             embed.add_field(
-                name="🆔 Riot ID to Add",
-                value="```\nGaprex#Karys\n```\n*Send a friend request to this ID to start.*",
+                name="🆔 Riot IDs to Add (اختر منطقتك)",
+                value=(
+                    "**🇪🇺 Europe:** `KARYS#UE06`\n"
+                    "**🇹🇷 Turkey:** `DALAS L7#BOSS`\n\n"
+                    "*Send a friend request to the correct account to start.*"
+                ),
                 inline=False
             )
             
@@ -727,6 +731,34 @@ class ServiceView(discord.ui.View):
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("Are you sure you would like to close this ticket?", view=TicketCloseConfirmationView(), ephemeral=False)
 
+async def auto_close_empty_ticket(channel: discord.TextChannel, user: discord.Member, delay_seconds: int = 600):
+    """Wait for a specified time, if the user hasn't sent any message in the channel, delete it."""
+    await asyncio.sleep(delay_seconds)
+    
+    try:
+        current_channel = channel.guild.get_channel(channel.id)
+        if current_channel is None:
+            return # Channel already deleted
+            
+        # Verify if user has sent any message (excluding interactions/bots)
+        # We check the last 50 messages to be safe.
+        messages = [msg async for msg in current_channel.history(limit=50)]
+        user_messaged = any(msg.author.id == user.id and msg.content.strip() != "" for msg in messages)
+        
+        if not user_messaged:
+            # Delete completely, even if it was moved to orders or logs
+            await current_channel.delete(reason="Auto-closed empty ticket due to inactivity.")
+            try:
+                await user.send(
+                    f"⏰ **تم إغلاق التذكرة الخاصة بك في {channel.guild.name} تلقائياً.**\n"
+                    f"السبب: لم تقم بكتابة أي رسالة داخل التذكرة لمدة 10 دقائق.\n\n"
+                    f"*(Your ticket was automatically deleted due to 10 minutes of inactivity.)*"
+                )
+            except:
+                pass
+    except Exception as e:
+        print(f"Error auto-closing empty ticket: {e}")
+
 class TicketSystemView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -758,14 +790,26 @@ class TicketSystemView(discord.ui.View):
         
         embed = discord.Embed(
             title=f"👋 Welcome {interaction.user.name}!",
-            description="### ⚠️ Action Required / مطلوب إجراء\n**Please select the service you want from the menu below to proceed.**\n**3afak khtar service li bghiti mn la liste lte7t bach nkml m3ak.** 👇",
+            description=(
+                "### ⚠️ Action Required / مطلوب إجراء\n"
+                "**Please select the service you want from the menu below to proceed.**\n"
+                "**3afak khtar service li bghiti mn la liste lte7t bach nkml m3ak.** 👇"
+            ),
             color=0x2ECC71
+        )
+        embed.add_field(
+            name="⏱️ تنبيه / Warning",
+            value="**انتباه:** سيتم إغلاق هذه التذكرة تلقائياً بعد 10 دقائق إذا لم تقم بكتابة أي رسالة.\n*(This ticket will auto-close in 10 minutes if you don't type any message.)*",
+            inline=False
         )
         
         # Send ServiceView which has the Dropdown AND Close button
         await channel.send(f"{interaction.user.mention}", embed=embed, view=ServiceView())
         
         await interaction.followup.send(f"✅ Ticket created: {channel.mention}", ephemeral=True)
+        
+        # Start the auto-close timer (600 seconds = 10 minutes)
+        bot.loop.create_task(auto_close_empty_ticket(channel, interaction.user, 600))
 
 # Flag to ensure on_ready logic only runs once
 bot_setup_done = False
@@ -1286,8 +1330,12 @@ async def gift(ctx):
     
     # Riot ID Section with clear formatting
     embed.add_field(
-        name="🆔 Riot ID to Add",
-        value="```\nGaprex#Karys\n```\n*Send a friend request to this ID to start.*",
+        name="🆔 Riot IDs to Add (Select your region)",
+        value=(
+            "**🇪🇺 Europe:** `KARYS#UE06`\n"
+            "**🇹🇷 Turkey:** `DALAS L7#BOSS`\n\n"
+            "*Send a friend request to the correct account to start.*"
+        ),
         inline=False
     )
     
@@ -1349,8 +1397,12 @@ async def gift_slash(interaction: discord.Interaction):
     
     # Riot ID with code block
     embed.add_field(
-        name="🆔 Riot ID to Add",
-        value="```\nGaprex#Karys\n```\n*Send a friend request to this ID to start.*",
+        name="🆔 Riot IDs to Add (Select your region)",
+        value=(
+            "**🇪🇺 Europe:** `KARYS#UE06`\n"
+            "**🇹🇷 Turkey:** `DALAS L7#BOSS`\n\n"
+            "*Send a friend request to the correct account to start.*"
+        ),
         inline=False
     )
     
@@ -1768,6 +1820,39 @@ async def payment(ctx):
             await ctx.send(embed=embed, view=view)
     else:
         await ctx.send(embed=embed, view=view)
+
+@bot.command(name='clean_logs')
+@commands.has_permissions(administrator=True)
+async def clean_logs(ctx):
+    """Clean empty tickets from all Ticket Logs categories"""
+    message = await ctx.send("⏳ Scanning all `Ticket Logs` categories for empty tickets...\n*This might take a minute to avoid Discord rate limits.*")
+    deleted = 0
+    
+    # Check all Ticket Logs categories (up to 15)
+    for i in range(16):
+        cat_name = "Ticket Logs" if i == 0 else f"Ticket Logs{i}"
+        category = discord.utils.get(ctx.guild.categories, name=cat_name)
+        
+        if category:
+            for channel in category.text_channels:
+                try:
+                    # Check the last 50 messages in the channel
+                    messages = [msg async for msg in channel.history(limit=50)]
+                    # Check if any non-bot user sent a message containing text
+                    user_messaged = any(not msg.author.bot and msg.content.strip() != "" for msg in messages)
+                    
+                    if not user_messaged:
+                        await channel.delete(reason="Admin cleanup of empty tickets.")
+                        deleted += 1
+                        # Crucial wait to avoid discord API rate limits when deleting many channels
+                        await asyncio.sleep(1.5)
+                except discord.NotFound:
+                    pass
+                except Exception as e:
+                    print(f"Error checking/deleting {channel.name}: {e}")
+                    
+    await message.edit(content=f"✅ **Cleanup complete!** Deleted **{deleted}** empty tickets from the logs.")
+
 
 
 @bot.tree.command(name="payment", description="عرض طرق الدفع (Show Payment Methods)")
