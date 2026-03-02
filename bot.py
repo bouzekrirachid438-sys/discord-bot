@@ -454,12 +454,37 @@ class PackageSelect(discord.ui.Select):
                 )
                 return
 
-        # Open Payment Method Selection
-        await interaction.response.send_message(
-            f"You selected: **{self.service_type} - {package}**\nPlease select your payment method below:", 
-            view=PaymentMethodView(f"{self.service_type}: {package}"),
-            ephemeral=True
+        # Prepare to send Image and Payment view
+        embed = discord.Embed(
+            title="💳 Payment Method",
+            description=f"You selected: **{self.service_type} - {package}**\nPlease select your payment method below:",
+            color=0x2ECC71
         )
+        view = PaymentMethodView(f"{self.service_type}: {package}")
+        
+        # Check if it's a specific Gifting bundle to show its image
+        bot_dir = os.path.dirname(os.path.abspath(__file__))
+        image_path = None
+        
+        if self.service_type == "Gifting":
+            if "VCT 2026 SEASON" in package:
+                image_path = os.path.join(bot_dir, "vct2026.png")
+            elif "LUNAR 26" in package:
+                image_path = os.path.join(bot_dir, "lunar26.png")
+            elif "QUACKED SERIES" in package:
+                image_path = os.path.join(bot_dir, "quacked.png")
+                
+        if image_path and os.path.exists(image_path):
+            file = discord.File(image_path, filename=os.path.basename(image_path))
+            embed.set_image(url=f"attachment://{os.path.basename(image_path)}")
+            await interaction.response.send_message(embed=embed, file=file, view=view, ephemeral=True)
+        else:
+            # Open Payment Method Selection (No image or image not found)
+            await interaction.response.send_message(
+                embed=embed, 
+                view=view,
+                ephemeral=True
+            )
 
 class PackageOrderModal(discord.ui.Modal):
     def __init__(self, title_str, payment_method):
@@ -551,6 +576,28 @@ class PaymentMethodView(discord.ui.View):
         super().__init__(timeout=60)
         self.add_item(PaymentSelect(package_info))
 
+class GiftingButtonView(discord.ui.View):
+    def __init__(self, bundle_name, bundle_vp, price_dh, price_usd):
+        super().__init__(timeout=None)
+        self.bundle_name = bundle_name
+        self.bundle_vp = bundle_vp
+        self.price_dh = price_dh
+        self.price_usd = price_usd
+
+    @discord.ui.button(label="🛒 Order", style=discord.ButtonStyle.green, custom_id="order_gifting_bundle")
+    async def order_bundle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Format the item string to include the price for the final order embed
+        item_str = f"Gifting: {self.bundle_name} ({self.bundle_vp:,} VP) | {self.price_usd} $ | {self.price_dh} DH"
+        
+        embed = discord.Embed(
+            title="💳 Payment Method",
+            description=f"You selected: **{self.bundle_name}**\nPlease select your payment method below:",
+            color=0x2ECC71
+        )
+        view = PaymentMethodView(item_str)
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
 
 class ServiceSelect(discord.ui.Select):
     def __init__(self):
@@ -624,7 +671,6 @@ class ServiceSelect(discord.ui.Select):
             
             embed.set_footer(text="Karys Shop | Valorant Gifting Service")
             
-            # Using same helper to reuse code if possible, or just copy/paste safe renaming
             try:
                 # Move to Gifting Orders Category if exists
                 guild = interaction.guild
@@ -638,30 +684,47 @@ class ServiceSelect(discord.ui.Select):
             except:
                 pass
                 
-            # Pricing Options (60 DH / $6 per 1000 VP)
-            options = []
+            # Send intro Embed first
+            await interaction.response.send_message(embed=embed, ephemeral=False)
             
-            # Generate options: 1k to 10k, then some larger ones
-            amounts = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000, 20000]
+            # Specific Bundles Requested
+            bundles = [
+                {"name": "VCT 2026 SEASON", "vp": 5550, "price_dh": 277.5, "price_usd": 27.75, "image": "vct2026.png"},
+                {"name": "RUN IT BACK: LUNAR 26", "vp": 8825, "price_dh": 441.25, "price_usd": 44.13, "image": "quacked.png"},
+                {"name": "HATCHBUDZ: QUACKED SERIES", "vp": 1160, "price_dh": 58, "price_usd": 5.80, "image": "lunar26.png"},
+                {"name": "EVORI'S SPELLCASTER", "vp": 4950, "price_dh": 247.5, "price_usd": 24.75, "image": "evori.png"},
+                {"name": "AEMONDIR VANDAL", "vp": 1775, "price_dh": 88.75, "price_usd": 8.88, "image": "aemondir.png"},
+                {"name": "GAIA'S VENGEANCE GHOST", "vp": 1775, "price_dh": 88.75, "price_usd": 8.88, "image": "gaia.png"},
+                {"name": "FORSAKEN OPERATOR", "vp": 1775, "price_dh": 88.75, "price_usd": 8.88, "image": "forsaken.png"},
+                {"name": "NOCTURNUM PHANTOM", "vp": 2175, "price_dh": 108.75, "price_usd": 10.88, "image": "nocturnum.png"}
+            ]
             
-            for amount in amounts:
-                price_dh = int((amount / 1000) * 60)
-                price_usd = int((amount / 1000) * 6)
-                
-                label = f"{amount:,} VP"
-                description = f"{price_usd} $ | {price_dh} DH"
-                
-                options.append(discord.SelectOption(
-                    label=label,
-                    description=description,
-                    emoji="🎁"
-                ))
-                
-            view = discord.ui.View()
-            view.add_item(PackageSelect("Gifting", options))
+            bot_dir = os.path.dirname(os.path.abspath(__file__))
             
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
-            await interaction.channel.send(f"{interaction.user.mention} Please select your package below or ask for a custom amount!")
+            for bundle in bundles:
+                bundle_embed = discord.Embed(
+                    title=f"🎁 {bundle['name']} ({bundle['vp']:,} VP)",
+                    description=f"**Price:** {bundle['price_usd']} $ | {bundle['price_dh']} DH",
+                    color=0x2ECC71
+                )
+                
+                image_path = os.path.join(bot_dir, bundle["image"])
+                file = None
+                
+                if os.path.exists(image_path):
+                    file = discord.File(image_path, filename=bundle["image"])
+                    bundle_embed.set_image(url=f"attachment://{bundle['image']}")
+                
+                view = GiftingButtonView(bundle["name"], bundle["vp"], bundle["price_dh"], bundle["price_usd"])
+                # Update label directly on the instance's first child (which is the button)
+                view.children[0].label = f"🛒 Order {bundle['name']} - {bundle['price_dh']} DH"
+                
+                if file:
+                    await interaction.channel.send(embed=bundle_embed, file=file, view=view)
+                else:
+                    await interaction.channel.send(embed=bundle_embed, view=view)
+                    
+            await interaction.channel.send(f"{interaction.user.mention} Please select your Discord Gifting Package from the options above!")
             
         elif service == "nitro":
             # Show Nitro Options
