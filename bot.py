@@ -690,13 +690,13 @@ class ServiceSelect(discord.ui.Select):
             # Specific Bundles Requested
             bundles = [
                 {"name": "VCT 2026 SEASON", "vp": 5550, "price_dh": 277.5, "price_usd": 27.75, "image": "vct2026.png"},
-                {"name": "RUN IT BACK: LUNAR 26", "vp": 8825, "price_dh": 441.25, "price_usd": 44.13, "image": "quacked.png"},
                 {"name": "HATCHBUDZ: QUACKED SERIES", "vp": 1160, "price_dh": 58, "price_usd": 5.80, "image": "lunar26.png"},
-                {"name": "EVORI'S SPELLCASTER", "vp": 4950, "price_dh": 247.5, "price_usd": 24.75, "image": "evori.png"},
-                {"name": "AEMONDIR VANDAL", "vp": 1775, "price_dh": 88.75, "price_usd": 8.88, "image": "aemondir.png"},
-                {"name": "GAIA'S VENGEANCE GHOST", "vp": 1775, "price_dh": 88.75, "price_usd": 8.88, "image": "gaia.png"},
-                {"name": "FORSAKEN OPERATOR", "vp": 1775, "price_dh": 88.75, "price_usd": 8.88, "image": "forsaken.png"},
-                {"name": "NOCTURNUM PHANTOM", "vp": 2175, "price_dh": 108.75, "price_usd": 10.88, "image": "nocturnum.png"}
+                {"name": "SILKLEAF BUNDLE", "vp": 5100, "price_dh": 255.0, "price_usd": 25.50, "image": "silkleaf.png"},
+                {"name": "SILKLEAF FAN", "vp": 2550, "price_dh": 127.5, "price_usd": 12.75, "image": "silk_fan.png"},
+                {"name": "SILKLEAF VANDAL", "vp": 1275, "price_dh": 63.75, "price_usd": 6.38, "image": "silk_vandal.png"},
+                {"name": "SILKLEAF MARSHAL", "vp": 1275, "price_dh": 63.75, "price_usd": 6.38, "image": "silk_marshal.png"},
+                {"name": "SILKLEAF STINGER", "vp": 1275, "price_dh": 63.75, "price_usd": 6.38, "image": "silk_stinger.png"},
+                {"name": "SILKLEAF BANDIT", "vp": 1275, "price_dh": 63.75, "price_usd": 6.38, "image": "silk_bandit.png"}
             ]
             
             bot_dir = os.path.dirname(os.path.abspath(__file__))
